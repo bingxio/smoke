@@ -99,7 +99,7 @@ impl Chunk {
 
         }
         D => {
-          println!("{}", self.memory[self.p as usize] as u8 as char);
+          print!("{}", self.memory[self.p as usize] as u8 as char);
         },
         C => {
 
