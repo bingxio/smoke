@@ -58,7 +58,7 @@ fn tokenizer(mut chars: Chars) -> Vec<Token> {
 struct Chunk {
   tokens: Vec<Token>,
   // memory -> 10000 * i32
-  memory: [i32; 10],
+  memory: [i32; 10000],
   // The position of every layer in memory.
   // 0 -> 100
   p: i32
@@ -71,7 +71,7 @@ impl Display for Chunk {
 }
 
 impl Chunk {
-  fn execute(&mut self) {
+  fn execute(&mut self) -> bool {
     let mut position = 0;
 
     loop {
@@ -99,14 +99,35 @@ impl Chunk {
 
         }
         D => {
-          println!("{} -> {}", self.p, self.memory[self.p as usize])
+          println!("{}", self.memory[self.p as usize]);
         },
         C => {
 
         },
         T => {
-          for i in self.memory.iter() {
-            print!("{} ", i);
+          let mut skip = 50;
+
+          for (i, v) in self.memory.iter().enumerate() {
+            if i % 50 == 0 {
+              println!();
+            } else {
+              print!("{} ", v);
+            }
+
+            if i == skip {
+              println!("\nPress `n` to next and press other to quit.");
+
+              let mut line = String::new();
+
+              std::io::stdin().read_line(&mut line).expect("Failed to read line !");
+
+              if line.eq(&"n\r\n".to_string()) {
+                skip += 50;
+                continue;
+              } else {
+                break;
+              }
+            }
           }
           println!();
         }
@@ -114,20 +135,9 @@ impl Chunk {
 
       position += 1;
     }
+
+    true
   }
-}
-
-static MEMORY: [i32; 10] = [0; 10];
-static P: i32 = 0;
-
-fn run(source: &mut String) {
-  Chunk {
-    tokens: tokenizer(source.chars()),
-    memory: MEMORY,
-    p: P
-  }.execute();
-
-  println!("p = {}", P);
 }
 
 fn run_file(path: String) {
@@ -140,12 +150,15 @@ fn run_file(path: String) {
 
     file.read_to_string(&mut contents).expect("Cannot read buffer to String.");
 
-    run(&mut contents);
+    Chunk { tokens: tokenizer(contents.chars()), memory: [0; 10000], p: 0 }.execute();
   }
 }
 
 fn run_repl() {
   println!("The smoke programming language interpreter [ version 1.0.0 ]");
+
+  let mut memory: [i32; 10000] = [0; 10000];
+  let mut p: i32 = 0;
 
   loop {
     print!(">>> ");
@@ -156,7 +169,12 @@ fn run_repl() {
     std::io::stdin().read_line(&mut line).expect("Failed to read line !");
 
     if line.trim_end().len() > 0 {
-      run(&mut line);
+      let mut chunk = Chunk { tokens: tokenizer(line.chars()), memory, p };
+
+      if chunk.execute() {
+        memory = chunk.memory;
+        p = chunk.p;
+      }
     }
   }
 }
