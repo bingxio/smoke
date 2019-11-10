@@ -1,6 +1,6 @@
 use std::io::{Write, Read};
 use std::fs::File;
-use std::fmt::{Display, Formatter, Error};
+use std::fmt::{Display, Formatter, Error, Debug};
 use std::str::Chars;
 use crate::TypeDef::*;
 
@@ -99,7 +99,7 @@ impl Chunk {
 
         }
         D => {
-          println!("{}", self.memory[self.p as usize]);
+          println!("{}", self.memory[self.p as usize] as u8 as char);
         },
         C => {
 
@@ -108,10 +108,10 @@ impl Chunk {
           let mut skip = 50;
 
           for (i, v) in self.memory.iter().enumerate() {
-            if i % 50 == 0 {
+            print!("{} ", v);
+
+            if i + 1 % 50 == 0 {
               println!();
-            } else {
-              print!("{} ", v);
             }
 
             if i == skip {
