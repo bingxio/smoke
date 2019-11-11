@@ -3,10 +3,11 @@ use std::fs::File;
 use std::fmt::Debug;
 use std::str::Chars;
 use std::mem::discriminant;
+use std::process::exit;
 
 use crate::TypeDef::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum TypeDef { L, R, A, M, LB, RB, D, S, C, T }
 
 fn typedef_eq(a: &TypeDef, b: &TypeDef) -> bool {
@@ -78,10 +79,9 @@ struct Chunk {
 impl Chunk {
   fn execute(&mut self) -> bool {
     while let Some(token) = self.tokens.get(self.pos as usize) {
-      self.statement(&token.typedef);
+      self.statement(&token.typedef.clone());
       self.pos += 1;
     }
-
     true
   }
 
@@ -128,14 +128,14 @@ impl Chunk {
     self.pos += 1;
 
     loop {
-      if self.pos as usize == self.tokens.len() {
+      if self.pos as usize >= self.tokens.len() {
         eprintln!("SyntaxErr: expect right bracket that program was end.");
-        std::process::exit(1);
+        exit(1);
       }
 
       let tok = self.tokens.get(self.pos as usize).unwrap();
 
-      println!("execute token -> {:?}", tok);
+      println!("Token -> {:?}", tok);
 
       if typedef_eq(&tok.typedef, &RB) {
         self.pos += 1;
@@ -146,7 +146,7 @@ impl Chunk {
         break;
       }
 
-      self.statement(&tok.typedef);
+      self.statement(&tok.typedef.clone());
     }
   }
 
