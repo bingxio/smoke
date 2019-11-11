@@ -78,22 +78,26 @@ struct Chunk {
 impl Chunk {
   fn execute(&mut self) -> bool {
     while let Some(token) = self.tokens.get(self.pos as usize) {
-      match token.typedef {
-        L =>  self.l_stmt(),
-        R =>  self.r_stmt(),
-        A =>  self.a_stmt(),
-        M =>  self.m_stmt(),
-        LB => self.lb_stmt(),
-        RB => self.rb_stmt(),
-        D =>  self.d_stmt(),
-        S =>  self.s_stmt(),
-        C =>  self.c_stmt(),
-        T =>  self.t_stmt(),
-      }
+      self.statement(&token.typedef);
       self.pos += 1;
     }
 
     true
+  }
+
+  fn statement(&mut self, typedef: &TypeDef) {
+    match typedef {
+      L =>  self.l_stmt(),
+      R =>  self.r_stmt(),
+      A =>  self.a_stmt(),
+      M =>  self.m_stmt(),
+      LB => self.lb_stmt(),
+      RB => self.rb_stmt(),
+      D =>  self.d_stmt(),
+      S =>  self.s_stmt(),
+      C =>  self.c_stmt(),
+      T =>  self.t_stmt(),
+    }
   }
 
   fn get_memory_value(&self, pos: i32) -> i32 {
@@ -131,6 +135,8 @@ impl Chunk {
 
       let tok = self.tokens.get(self.pos as usize).unwrap();
 
+      println!("execute token -> {:?}", tok);
+
       if typedef_eq(&tok.typedef, &RB) {
         self.pos += 1;
         break;
@@ -140,7 +146,7 @@ impl Chunk {
         break;
       }
 
-      self.execute();
+      self.statement(&tok.typedef);
     }
   }
 
