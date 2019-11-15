@@ -53,7 +53,7 @@ fn tokenizer(mut chars: Chars) -> (bool, Vec<Token>) {
       '!' => tokens.push(Token::new(T, line)),
       '*' => tokens.push(Token::new(S, line)),
       ch @ _ => {
-        eprintln!("SyntaxErr: unknown char: {}", ch);
+        eprintln!("SyntaxErr: [line {}] unknown char: {}", line, ch);
         return (false, tokens);
       }
     }
@@ -74,21 +74,26 @@ struct Chunk {
   // If running in repl mode to do something.
   repl_mode: bool,
   // If the program has some error to handle repl.
-  has_err: bool
+  has_err: bool,
+  // The line of readed current token.
+  read_line: i32
 }
 
 impl Chunk {
   fn execute(&mut self) {
     while let Some(token) = self.tokens.get(self.pos as usize) {
+      // There is a bug for rust language.
       let cloned = token.typedef.clone();
-
+      // Set read line of program with first token.
+      self.read_line = token.line;
+      // To do statements...
       self.statement(cloned);
       self.pos += 1;
     }
   }
 
-  fn handle_err(&mut self, message: &str) {
-    eprintln!("{}", message);
+  fn handle_err(&mut self, err_type: &str, message: &str) {
+    eprintln!("{} [line {}] {}", err_type, self.read_line, message);
     self.has_err = true;
   }
 
@@ -135,9 +140,14 @@ impl Chunk {
     let p_backup = self.p;
     let pos_backup = self.pos;
 
+    if self.pos as usize >= self.tokens.len() {
+      self.handle_err("SyntaxErr: ", "expect right bracket that program was end.");
+      return;
+    }
+
     while self.get_memory_value(p_backup) != 0 {
       if self.pos as usize >= self.tokens.len() {
-        self.handle_err("SyntaxErr: expect right bracket that program was end.");
+        self.handle_err("SyntaxErr: ", "expect right bracket that program was end.");
         break;
       }
 
@@ -169,13 +179,16 @@ impl Chunk {
   fn c_stmt(&mut self) {
     let mut line = String::new();
 
+    print!("Typing: ");
+
+    stdout().flush().expect("Failed to flush the screen !");
     stdin().read_line(&mut line).expect("Failed to read line !");
 
     match line.trim().parse::<i32>() {
       Ok(val) => {
         self.memory[self.p as usize] = val;
       }
-      Err(_) => self.handle_err("Please input a number.")
+      Err(_) => self.handle_err("TypeErr: ", "Please input a number.")
     }
   }
 
@@ -223,7 +236,8 @@ fn run_file(path: String) {
       p: 0,
       pos: 0,
       repl_mode: false,
-      has_err: false
+      has_err: false,
+      read_line: 1
     }.execute();
   }
 }
@@ -288,7 +302,8 @@ fn run_repl() {
           let tokens = tokenizer(line.chars());
 
           if tokens.0 {
-            let mut chunk = Chunk { tokens: tokens.1, memory, p, pos: 0, repl_mode: true, has_err: false };
+            let mut chunk = Chunk { 
+              tokens: tokens.1, memory, p, pos: 0, repl_mode: true, has_err: false, read_line: 1 };
 
             chunk.execute();
 
