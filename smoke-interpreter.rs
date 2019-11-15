@@ -18,6 +18,7 @@ fn typedef_eq(a: &TypeDef, b: &TypeDef) -> bool {
 struct Token { typedef: TypeDef, line: i32 }
 
 impl Token {
+
   fn new(typedef: TypeDef, line: i32) -> Self {
     Token { typedef, line }
   }
@@ -77,9 +78,10 @@ struct Chunk {
 }
 
 impl Chunk {
+
   fn execute(&mut self) -> bool {
     while let Some(token) = self.tokens.get(self.pos as usize) {
-      self.statement(&token.typedef.clone());
+      self.statement(&token.typedef);
       self.pos += 1;
     }
     true
@@ -135,8 +137,6 @@ impl Chunk {
 
       let tok = self.tokens.get(self.pos as usize).unwrap();
 
-      println!("Token -> {:?}", tok);
-
       if typedef_eq(&tok.typedef, &RB) {
         self.pos += 1;
         break;
@@ -146,7 +146,8 @@ impl Chunk {
         break;
       }
 
-      self.statement(&tok.typedef.clone());
+      self.statement(&tok.typedef);
+      self.pos += 1;
     }
   }
 
