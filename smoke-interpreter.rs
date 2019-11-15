@@ -3,7 +3,6 @@ use std::fs::File;
 use std::fmt::Debug;
 use std::str::Chars;
 use std::mem::discriminant;
-use std::process::exit;
 
 use crate::TypeDef::*;
 
@@ -18,7 +17,6 @@ fn typedef_eq(a: &TypeDef, b: &TypeDef) -> bool {
 struct Token { typedef: TypeDef, line: i32 }
 
 impl Token {
-
   fn new(typedef: TypeDef, line: i32) -> Self {
     Token { typedef, line }
   }
@@ -74,20 +72,27 @@ struct Chunk {
   // Index of the token list range.
   pos: i32,
   // If running in repl mode to do something.
-  repl_mode: bool
+  repl_mode: bool,
+  // If the program has some error to handle repl.
+  has_err: bool
 }
 
 impl Chunk {
-
-  fn execute(&mut self) -> bool {
+  fn execute(&mut self) {
     while let Some(token) = self.tokens.get(self.pos as usize) {
-      self.statement(&token.typedef);
+      let cloned = token.typedef.clone();
+
+      self.statement(cloned);
       self.pos += 1;
     }
-    true
   }
 
-  fn statement(&mut self, typedef: &TypeDef) {
+  fn handle_err(&mut self, message: &str) {
+    eprintln!("{}", message);
+    self.has_err = true;
+  }
+
+  fn statement(&mut self, typedef: TypeDef) {
     match typedef {
       L =>  self.l_stmt(),
       R =>  self.r_stmt(),
@@ -131,11 +136,12 @@ impl Chunk {
 
     loop {
       if self.pos as usize >= self.tokens.len() {
-        eprintln!("SyntaxErr: expect right bracket that program was end.");
-        exit(1);
+        self.handle_err("SyntaxErr: expect right bracket that program was end.");
+        break;
       }
 
       let tok = self.tokens.get(self.pos as usize).unwrap();
+      let cloned = tok.typedef.clone();
 
       if typedef_eq(&tok.typedef, &RB) {
         self.pos += 1;
@@ -146,12 +152,16 @@ impl Chunk {
         break;
       }
 
-      self.statement(&tok.typedef);
+      self.statement(cloned);
       self.pos += 1;
     }
+
+    self.pos += 1;
   }
 
-  fn rb_stmt(&mut self) {}
+  fn rb_stmt(&mut self) {
+    // TODO: The right bracket was skiped that ignore it.
+  }
 
   fn d_stmt(&mut self) {
     print!("{}{}", self.memory[self.p as usize] as u8 as char, if self.repl_mode {
@@ -216,7 +226,8 @@ fn run_file(path: String) {
       memory: [0; 10000],
       p: 0,
       pos: 0,
-      repl_mode: true
+      repl_mode: false,
+      has_err: false
     }.execute();
   }
 }
@@ -281,9 +292,11 @@ fn run_repl() {
           let tokens = tokenizer(line.chars());
 
           if tokens.0 {
-            let mut chunk = Chunk { tokens: tokens.1, memory, p, pos: 0, repl_mode: true };
+            let mut chunk = Chunk { tokens: tokens.1, memory, p, pos: 0, repl_mode: true, has_err: false };
 
-            if chunk.execute() {
+            chunk.execute();
+
+            if !chunk.has_err {
               memory = chunk.memory;
               p = chunk.p;
             }
