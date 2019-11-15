@@ -130,11 +130,12 @@ impl Chunk {
   }
 
   fn lb_stmt(&mut self) {
-    let p_backup = self.p;
-
     self.pos += 1;
 
-    loop {
+    let p_backup = self.p;
+    let pos_backup = self.pos;
+
+    while self.get_memory_value(p_backup) != 0 {
       if self.pos as usize >= self.tokens.len() {
         self.handle_err("SyntaxErr: expect right bracket that program was end.");
         break;
@@ -144,19 +145,13 @@ impl Chunk {
       let cloned = tok.typedef.clone();
 
       if typedef_eq(&tok.typedef, &RB) {
-        self.pos += 1;
-        break;
-      }
-
-      if self.get_memory_value(p_backup) == 0 {
-        break;
+        self.pos = pos_backup;
+        continue;
       }
 
       self.statement(cloned);
       self.pos += 1;
     }
-
-    self.pos += 1;
   }
 
   fn rb_stmt(&mut self) {
@@ -164,23 +159,24 @@ impl Chunk {
   }
 
   fn d_stmt(&mut self) {
-    print!("{}{}", self.memory[self.p as usize] as u8 as char, if self.repl_mode {
-      '\n'
-    } else {
-      ' '
-    });
+    print!("{}{}", self.memory[self.p as usize] as u8 as char, if self.repl_mode { '\n' } else { ' ' });
   }
 
   fn s_stmt(&mut self) {
-    print!("{}{}", self.memory[self.p as usize], if self.repl_mode {
-      '\n'
-    } else {
-      ' '
-    })
+    print!("{}{}", self.memory[self.p as usize], if self.repl_mode { '\n' } else { ' ' });
   }
 
   fn c_stmt(&mut self) {
+    let mut line = String::new();
 
+    stdin().read_line(&mut line).expect("Failed to read line !");
+
+    match line.trim().parse::<i32>() {
+      Ok(val) => {
+        self.memory[self.p as usize] = val;
+      }
+      Err(_) => self.handle_err("Please input a number.")
+    }
   }
 
   fn t_stmt(&mut self) {
